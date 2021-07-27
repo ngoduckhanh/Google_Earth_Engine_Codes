@@ -1,0 +1,37 @@
+var mekong = ee.FeatureCollection("users/khanhducngo1985/Mekong_Boundary/Mekong_mainland_boundary"),
+    rice = /* color: #d63000 */ee.Geometry.Point([105.63644784699484, 9.329684260055766]);
+
+var boundary = mekong;
+Map.centerObject(boundary, 12);
+
+// Get the SAR image collection.
+var collection = ee.ImageCollection('COPERNICUS/S1_GRD')
+    .filterBounds(boundary)
+    .filterDate('2014-10-01', '2018-10-01')
+    .filter(ee.Filter.eq('instrumentMode', 'IW'))
+    .filter(ee.Filter.eq('orbitProperties_pass', 'DESCENDING'))
+    .select(['VH']);
+
+// Create a 3 band stack by selecting from different periods (months)
+var im1 = ee.Image(collection.filterDate('2017-01-01', '2017-01-31')
+          .max().clip(boundary));
+var im2 = ee.Image(collection.filterDate('2017-02-01', '2017-02-28')
+          .max().clip(boundary));
+var im3 = ee.Image(collection.filterDate('2017-03-01', '2017-03-31')
+          .max().clip(boundary));
+
+// Map Single band image and 3-band composite image.
+Map.addLayer (im1, {min: -25, max:5}, 'VH single-band image in Jan 2017', false);
+Map.addLayer(im1.addBands(im2).addBands(im3), {min: -20, max: -5}, 'VH 3-band composite image');
+
+// Plot the fitted model and the original data at the ROI.
+
+var collection = collection.filterDate('2014-10-01', '2015-10-01');
+var harmonicFittedPlot =ui.Chart.image.series(
+  collection.select(['VH']), rice, ee.Reducer.min(), 10)
+    .setOptions({
+      title: 'Time-series SAR',
+      lineWidth: 1,
+      pointSize: 3,});
+
+print(harmonicFittedPlot);
